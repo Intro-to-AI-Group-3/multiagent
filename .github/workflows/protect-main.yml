@@ -1,0 +1,41 @@
+name: Protect Main Branch
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  enforce-policy:
+    name: Enforce staging-only merges
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Validate source branch and approvals
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const requiredApprovals = 2;
+            const headBranch = context.payload.pull_request.head.ref;
+            if (headBranch !== 'staging') {
+              core.setFailed(`Only staging can merge into main (found ${headBranch}).`);
+              return;
+            }
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+            const latestReviewState = new Map();
+            for (const review of reviews) {
+              if (!review.user) {
+                continue;
+              }
+              latestReviewState.set(review.user.login, review.state);
+            }
+            const approvals = [...latestReviewState.values()].filter((state) => state === 'APPROVED').length;
+            if (approvals < requiredApprovals) {
+              core.setFailed(`Need ${requiredApprovals} approvals from reviewers (currently ${approvals}).`);
+            }
