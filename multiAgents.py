@@ -135,6 +135,48 @@ class MinimaxAgent(MultiAgentSearchAgent):
         Returns whether or not the game state is a losing state
         """
         "*** YOUR CODE HERE ***"
+        # GameState class in pacman.py
+        # Using this pattern:
+        # 1. Check terminal/depth base case first (win, lose, or depth reached)
+        # 2. Call getLegalActions for the current agent
+        # 3. If there are no legal actions, treat like a terminal state and return evaluation
+        # 4. Otherwise, recurse over each successor from generateSuccessor
+        
+        agentIndex = 0      # Index starting at 0 for pacman
+        depth = 0           # Depth also starts at 0 and increases after all agents move
+        
+        # 1. Checking terminal/depth base case and returning if win/lose or depth reached
+        if gameState.isWin() or gameState.isLose():
+            return self.evaluationFunction(gameState)
+        if agentIndex == 0 and depth == self.depth:
+            return self.evaluationFunction(gameState)
+        
+        # 2. Get legal actions for the current agent
+        legalActions = gameState.getLegalActions(agentIndex)
+        
+        # 3. No legal actions -> treat like terminal state
+        if len(legalActions) == 0:
+            return self.evaluationFunction(gameState)
+        
+        # 4. Recurse over each successor
+        nextAgent = (agentIndex + 1) % gameState.getNumAgents()
+        
+        if agentIndex == 0:                                                 # Pacman's turn (maximizing player)
+            maxVal = float('-inf')
+            for action in legalActions:
+                successor = gameState.generateSuccessor(agentIndex, action)
+                value = self.getAction(successor, nextAgent, depth + 1)     # Recurse with next agent and increased depth
+                maxVal = max(maxVal, value)
+            return maxVal
+        else:                                                               # Ghost's turn (minimizing player)
+            minVal = float('inf')
+            for action in legalActions:
+                successor = gameState.generateSuccessor(agentIndex, action)
+                value = self.getAction(successor, nextAgent, depth)         # Recurse with next agent but same depth
+                minVal = min(minVal, value)
+            return minVal
+        
+        # riseNotDefined marks unfinished methods
         util.raiseNotDefined()
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
@@ -150,4 +192,51 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
+        def expectimax(state, agentIndex, depth):
+
+            # Terminal condition
+            if state.isWin() or state.isLose() or depth == self.depth:
+                return self.evaluationFunction(state)
+
+            numAgents = state.getNumAgents()
+            nextAgent = (agentIndex + 1) % numAgents
+            nextDepth = depth + 1 if nextAgent == 0 else depth
+
+            actions = state.getLegalActions(agentIndex)
+
+            if len(actions) == 0:
+                return self.evaluationFunction(state)
+
+            # PACMAN (MAX)
+            if agentIndex == 0:
+                value = float('-inf')
+                for action in actions:
+                    successor = state.generateSuccessor(agentIndex, action)
+                    value = max(value, expectimax(successor, nextAgent, nextDepth))
+                return value
+
+            # GHOST (EXPECTATION)
+            else:
+                value = 0
+                prob = 1.0 / len(actions)
+
+                for action in actions:
+                    successor = state.generateSuccessor(agentIndex, action)
+                    value += prob * expectimax(successor, nextAgent, nextDepth)
+
+                return value
+
+        # Root decision
+        bestAction = None
+        bestValue = float('-inf')
+
+        for action in gameState.getLegalActions(0):
+            successor = gameState.generateSuccessor(0, action)
+            value = expectimax(successor, 1, 0)
+
+            if value > bestValue:
+                bestValue = value
+                bestAction = action
+
+        return bestAction
         util.raiseNotDefined()
