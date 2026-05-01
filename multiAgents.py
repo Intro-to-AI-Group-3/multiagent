@@ -135,7 +135,35 @@ class MinimaxAgent(MultiAgentSearchAgent):
         Returns whether or not the game state is a losing state
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        def minimax(gameState, agentIndex, depth):
+            # game is over or depth limti is reached
+            if gameState.isWin() or gameState.isLose() or depth == self.depth:
+                return self.evaluationFunction(gameState)
+
+            legalActions = gameState.getLegalActions(agentIndex)
+            if not legalActions:
+                return self.evaluationFunction(gameState)
+
+            nextAgent = (agentIndex + 1) % gameState.getNumAgents()
+            nextDepth = depth + 1 if nextAgent == 0 else depth
+
+            if agentIndex == 0: # maximizing player 
+                return max(minimax(gameState.generateSuccessor(agentIndex, action), nextAgent, nextDepth) for action in legalActions)
+            else: # minimizing ghost
+                return min(minimax(gameState.generateSuccessor(agentIndex, action), nextAgent, nextDepth) for action in legalActions)
+
+        legalActions = gameState.getLegalActions(0)
+        bestAction = None
+        maxVal = float('-inf')
+        
+        for action in legalActions:
+            successor = gameState.generateSuccessor(0, action)
+            value = minimax(successor, 1, 0)
+            if value > maxVal:
+                maxVal = value
+                bestAction = action
+                
+        return bestAction
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
@@ -150,4 +178,51 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
+        def expectimax(state, agentIndex, depth):
+
+            # Terminal condition
+            if state.isWin() or state.isLose() or depth == self.depth:
+                return self.evaluationFunction(state)
+
+            numAgents = state.getNumAgents()
+            nextAgent = (agentIndex + 1) % numAgents
+            nextDepth = depth + 1 if nextAgent == 0 else depth
+
+            actions = state.getLegalActions(agentIndex)
+
+            if len(actions) == 0:
+                return self.evaluationFunction(state)
+
+            # PACMAN (MAX)
+            if agentIndex == 0:
+                value = float('-inf')
+                for action in actions:
+                    successor = state.generateSuccessor(agentIndex, action)
+                    value = max(value, expectimax(successor, nextAgent, nextDepth))
+                return value
+
+            # GHOST (EXPECTATION)
+            else:
+                value = 0
+                prob = 1.0 / len(actions)
+
+                for action in actions:
+                    successor = state.generateSuccessor(agentIndex, action)
+                    value += prob * expectimax(successor, nextAgent, nextDepth)
+
+                return value
+
+        # Root decision
+        bestAction = None
+        bestValue = float('-inf')
+
+        for action in gameState.getLegalActions(0):
+            successor = gameState.generateSuccessor(0, action)
+            value = expectimax(successor, 1, 0)
+
+            if value > bestValue:
+                bestValue = value
+                bestAction = action
+
+        return bestAction
         util.raiseNotDefined()
