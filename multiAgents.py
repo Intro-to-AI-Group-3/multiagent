@@ -135,49 +135,35 @@ class MinimaxAgent(MultiAgentSearchAgent):
         Returns whether or not the game state is a losing state
         """
         "*** YOUR CODE HERE ***"
-        # GameState class in pacman.py
-        # Using this pattern:
-        # 1. Check terminal/depth base case first (win, lose, or depth reached)
-        # 2. Call getLegalActions for the current agent
-        # 3. If there are no legal actions, treat like a terminal state and return evaluation
-        # 4. Otherwise, recurse over each successor from generateSuccessor
+        def minimax(gameState, agentIndex, depth):
+            # game is over or depth limti is reached
+            if gameState.isWin() or gameState.isLose() or depth == self.depth:
+                return self.evaluationFunction(gameState)
+
+            legalActions = gameState.getLegalActions(agentIndex)
+            if not legalActions:
+                return self.evaluationFunction(gameState)
+
+            nextAgent = (agentIndex + 1) % gameState.getNumAgents()
+            nextDepth = depth + 1 if nextAgent == 0 else depth
+
+            if agentIndex == 0: # maximizing player 
+                return max(minimax(gameState.generateSuccessor(agentIndex, action), nextAgent, nextDepth) for action in legalActions)
+            else: # minimizing ghost
+                return min(minimax(gameState.generateSuccessor(agentIndex, action), nextAgent, nextDepth) for action in legalActions)
+
+        legalActions = gameState.getLegalActions(0)
+        bestAction = None
+        maxVal = float('-inf')
         
-        agentIndex = 0      # Index starting at 0 for pacman
-        depth = 0           # Depth also starts at 0 and increases after all agents move
-        
-        # 1. Checking terminal/depth base case and returning if win/lose or depth reached
-        if gameState.isWin() or gameState.isLose():
-            return self.evaluationFunction(gameState)
-        if agentIndex == 0 and depth == self.depth:
-            return self.evaluationFunction(gameState)
-        
-        # 2. Get legal actions for the current agent
-        legalActions = gameState.getLegalActions(agentIndex)
-        
-        # 3. No legal actions -> treat like terminal state
-        if len(legalActions) == 0:
-            return self.evaluationFunction(gameState)
-        
-        # 4. Recurse over each successor
-        nextAgent = (agentIndex + 1) % gameState.getNumAgents()
-        
-        if agentIndex == 0:                                                 # Pacman's turn (maximizing player)
-            maxVal = float('-inf')
-            for action in legalActions:
-                successor = gameState.generateSuccessor(agentIndex, action)
-                value = self.getAction(successor, nextAgent, depth + 1)     # Recurse with next agent and increased depth
-                maxVal = max(maxVal, value)
-            return maxVal
-        else:                                                               # Ghost's turn (minimizing player)
-            minVal = float('inf')
-            for action in legalActions:
-                successor = gameState.generateSuccessor(agentIndex, action)
-                value = self.getAction(successor, nextAgent, depth)         # Recurse with next agent but same depth
-                minVal = min(minVal, value)
-            return minVal
-        
-        # riseNotDefined marks unfinished methods
-        util.raiseNotDefined()
+        for action in legalActions:
+            successor = gameState.generateSuccessor(0, action)
+            value = minimax(successor, 1, 0)
+            if value > maxVal:
+                maxVal = value
+                bestAction = action
+                
+        return bestAction
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
